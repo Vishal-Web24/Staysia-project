@@ -1,0 +1,60 @@
+<style>
+  .staysia {
+    font-size: 1.75rem;
+    color: #fe424d;
+    font-size: 25px;
+  }
+  .host {
+    border-radius: 25px;
+  }
+  .host:hover {
+    background-color: #eaeaea;
+  }
+</style>
+<nav class="navbar sticky-top navbar-expand-md bg-body-light border-bottom">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/listings">
+      <img
+        src="/logo/bnblogo.png"
+        alt="Logo"
+        style="  height: 32px; margin-left: 2rem;"
+    /></a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNavAltMarkup"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+      <div class="navbar-nav">
+        <a class="nav-link" href="/listings"><b class="staysia">Staysia</b></a>
+      </div>
+      <div class="navbar-nav ms-auto">
+        <form class="d-flex" role="search">
+          <input
+            class="form-control me-2 search-input"
+            type="search"
+            placeholder="Search destinations"
+            aria-label="Search"
+          />
+          <button class="btn search-btn" type="submit">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            Search
+          </button>
+        </form>
+      </div>
+      <div class="navbar-nav ms-auto">
+        <a class="nav-link host" href="/listings/new">Become a host</a>
+        <%if(!currUser){%>
+        <a class="nav-link host" href="/signup"><b>Sign up</b></a>
+        <i class="nav-link ">or</i>
+        <a class="nav-link host" href="/login"><b>Log in</b></a>
+        <% }%> <%if(currUser){%>
+        <a class="nav-link host" href="/logout"><b>Log out</b></a>
+        <%}%>
+      </div>
+    </div>
+  </div>
+</nav>
