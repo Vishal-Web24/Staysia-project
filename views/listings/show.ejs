@@ -128,7 +128,7 @@
           method="POST"
           class="mb-3"
         >
-          <% if(currUser.id == review.author.id){%>
+          <% if(currUser && currUser._id.equals(review.author._id)){%>
           <button class="btn btn-sm btn-dark mt-2">Delete</button>
           <%}%>
         </form>
