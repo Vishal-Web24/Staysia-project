@@ -51,6 +51,7 @@ const sessionOptions = {
     expire: Date.now() + 7 * 24 * 60 * 60 * 1000,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     httpOnly: true,
+    
   },
 };
 
@@ -70,6 +71,7 @@ app.use((req, res, next) => {
   res.locals.currUser = req.user;
   next();
 });
+
 
 app.use("/listings", listingsRouter);
 app.use("/listings/:id/reviews", reviewsRouter);

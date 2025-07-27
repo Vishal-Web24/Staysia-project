@@ -30,19 +30,84 @@ module.exports.showListing = async (req, res) => {
 };
 
 module.exports.createListing = async (req, res, next) => {
+  // try {
+  //   const { listing } = req.body;
+  //   // Step 1: Geocode the location (e.g., "Jaipur, India")
+  //   const geoRes = await fetch(
+  //     `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+  //       listing.location
+  //     )}`
+  //   );
+  //   const geoData = await geoRes.json();
+  //   if (!geoData.length) {
+  //     req.flash("error", "Location not found! Please enter a valid location.");
+  //     return res.redirect("/listings/new");
+  //   }
+  //   // Step 2: Convert to GeoJSON format
+  //   const lat = parseFloat(geoData[0].lat);
+  //   const lon = parseFloat(geoData[0].lon);
+  //   let url = req.file.path;
+  //   let filename = req.file.filename;
+  //   // console.log(url, "..", filename);
+  //   const newListing = new Listing(req.body.listing);
+  //   // console.log(req.user);
+  //   newListing.owner = req.user._id;
+  //   newListing.image = { url, filename };
+  //   newListing.geometry = {
+  //     type: "Point",
+  //     coordinates: [lon, lat], // GeoJSON format: [longitude, latitude]
+  //   };
+  //   let savedListing = await newListing.save();
+  //   console.log(savedListing);
+  //   req.flash("success", "New Listing Created!");
+  //   res.redirect("/listings");
+  // } catch (err) {
+  //   next(err);
+  // }
+
+  // FIXME: Server returned HTML instead of JSON – likely an error page (404/500 or redirect).
+  // TODO: Check backend route /upload for errors and ensure JSON response is returned.
+
   try {
     const { listing } = req.body;
 
-    // Step 1: Geocode the location (e.g., "Jaipur, India")
-    const geoRes = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-        listing.location
-      )}`
-    );
-    const geoData = await geoRes.json();
+    // Check if file was uploaded
+    if (!req.file) {
+      req.flash("error", "Please upload an image!");
+      return res.redirect("/listings/new");
+    }
 
-    if (!geoData.length) {
-      req.flash("error", "Location not found!");
+    // Step 1: Geocode the location (e.g., "Jaipur, India")
+    let geoRes, geoData;
+
+    try {
+      geoRes = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          listing.location
+        )}`,
+        {
+          headers: {
+            "User-Agent": "Staysia App", // OpenStreetMap requires a User-Agent
+          },
+        }
+      );
+
+      if (!geoRes.ok) {
+        throw new Error(`Geocoding failed: ${geoRes.status}`);
+      }
+
+      geoData = await geoRes.json();
+    } catch (geoError) {
+      console.error("Geocoding error:", geoError);
+      req.flash(
+        "error",
+        "Unable to find location. Please try a different location name."
+      );
+      return res.redirect("/listings/new");
+    }
+
+    if (!geoData || !geoData.length) {
+      req.flash("error", "Location not found! Please enter a valid location.");
       return res.redirect("/listings/new");
     }
 
@@ -50,12 +115,16 @@ module.exports.createListing = async (req, res, next) => {
     const lat = parseFloat(geoData[0].lat);
     const lon = parseFloat(geoData[0].lon);
 
+    // Validate coordinates
+    if (isNaN(lat) || isNaN(lon)) {
+      req.flash("error", "Invalid location coordinates received.");
+      return res.redirect("/listings/new");
+    }
+
     let url = req.file.path;
     let filename = req.file.filename;
-    // console.log(url, "..", filename);
 
     const newListing = new Listing(req.body.listing);
-    // console.log(req.user);
     newListing.owner = req.user._id;
     newListing.image = { url, filename };
 
@@ -63,13 +132,16 @@ module.exports.createListing = async (req, res, next) => {
       type: "Point",
       coordinates: [lon, lat], // GeoJSON format: [longitude, latitude]
     };
+
     let savedListing = await newListing.save();
-    console.log(savedListing);
+    console.log("New listing created:", savedListing._id);
     req.flash("success", "New Listing Created!");
 
     res.redirect("/listings");
   } catch (err) {
-    next(err);
+    console.error("Error creating listing:", err);
+    req.flash("error", "Something went wrong while creating the listing.");
+    res.redirect("/listings/new");
   }
 };
 
