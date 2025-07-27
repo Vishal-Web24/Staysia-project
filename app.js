@@ -75,6 +75,10 @@ app.use((req, res, next) => {
 // TEMPORARY SEEDING ROUTE - REMOVE AFTER USE
 app.get("/seed-production", async (req, res) => {
   try {
+     // Import models (add these lines at the beginning)
+    const Listing = require("./models/listing.js");
+    const User = require("./models/user.js");
+
     // Sample users data
     const sampleUsers = [
      {
@@ -373,18 +377,21 @@ app.get("/seed-production", async (req, res) => {
   },
     ];
 
+     console.log("Starting database seeding...");
+
     // Clear old data
     await Listing.deleteMany({});
     await User.deleteMany({});
+    console.log("Old data cleared");
 
     // Create users
-    console.log("Creating users...");
     const createdUsers = [];
     for (let userData of sampleUsers) {
       const { username, email, password } = userData;
       const newUser = new User({ email, username });
       const registeredUser = await User.register(newUser, password);
       createdUsers.push(registeredUser);
+      console.log(`Created user: ${username}`);
     }
 
     // Create listings with random owners
@@ -395,6 +402,7 @@ app.get("/seed-production", async (req, res) => {
     }));
 
     const savedListings = await Listing.insertMany(listingsWithOwners);
+    console.log("Listings created");
     
     res.json({
       success: true,
@@ -404,10 +412,13 @@ app.get("/seed-production", async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Seeding error:", error);
+    res.status(500).json({ 
+      error: error.message,
+      stack: error.stack 
+    });
   }
 });
-
 app.use("/listings", listingsRouter);
 app.use("/listings/:id/reviews", reviewsRouter);
 app.use("/", userRouter);
