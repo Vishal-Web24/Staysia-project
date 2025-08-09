@@ -17,6 +17,8 @@ const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
 const helmet = require("helmet");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+const slowDown = require("express-slow-down");
 
 const listingsRouter = require("./routes/listing.js");
 const reviewsRouter = require("./routes/review.js");
@@ -40,7 +42,16 @@ app.use(helmet({
       upgradeInsecureRequests: [],
     },
   },
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true,
+  frameguard: { action: 'deny' },
+  xssFilter: true,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" }
 }));
 
 app.use(cors({
@@ -50,6 +61,24 @@ app.use(cors({
 
 // Trust proxy for Render
 app.set('trust proxy', 1);
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const speedLimiter = slowDown({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  delayAfter: 50, // allow 50 requests per 15 minutes, then...
+  delayMs: 500 // begin adding 500ms of delay per request after
+});
+
+app.use(limiter);
+app.use(speedLimiter);
 
 // Force HTTPS in production
 if (process.env.NODE_ENV === "production") {
@@ -112,6 +141,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Security.txt file for responsible disclosure
+app.get('/.well-known/security.txt', (req, res) => {
+  res.type('text/plain');
+  res.send(`Contact: https://github.com/yourusername/staysia/security/advisories
+Preferred-Languages: en
+Canonical: https://${req.get('host')}/.well-known/security.txt`);
+});
 
 app.use("/listings", listingsRouter);
 app.use("/listings/:id/reviews", reviewsRouter);
