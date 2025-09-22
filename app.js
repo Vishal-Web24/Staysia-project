@@ -26,11 +26,13 @@ const { error } = require("console");
 const dbUrl = process.env.ATLASDB_URL;
 
 // Security middleware
+app.disable("x-powered-by");
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
         styleSrc: [
           "'self'",
           "'unsafe-inline'",
@@ -44,6 +46,7 @@ app.use(
           "https://fonts.gstatic.com",
           "https://cdn.jsdelivr.net",
           "https://cdnjs.cloudflare.com",
+          "data:",
         ],
         scriptSrc: [
           "'self'",
@@ -65,7 +68,12 @@ app.use(
         upgradeInsecureRequests: [],
       },
     },
+    referrerPolicy: { policy: "no-referrer" },
+    frameguard: { action: "deny" },
+    noSniff: true,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginEmbedderPolicy: false,
+    hsts: process.env.NODE_ENV === "production" ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
   })
 );
 
@@ -99,6 +107,24 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "/public")));
 app.use(methodOverRide("_method"));
 app.engine("ejs", ejsMate);
+
+// robots.txt and security.txt
+app.get(["/robots.txt", "/robot.txt"], (req, res) => {
+  res.type("text/plain").send("User-agent: *\nDisallow:\n");
+});
+
+app.get("/.well-known/security.txt", (req, res) => {
+  const contact = process.env.SECURITY_CONTACT || "mailto:security@example.com";
+  res
+    .type("text/plain")
+    .send(
+      [
+        `Contact: ${contact}`,
+        `Policy: https://${req.headers.host}/`,
+        "Preferred-Languages: en",
+      ].join("\n")
+    );
+});
 
 const store = MongoStore.create({
   mongoUrl: dbUrl,
