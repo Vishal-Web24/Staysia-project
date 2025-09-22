@@ -126,6 +126,15 @@ app.get("/.well-known/security.txt", (req, res) => {
     );
 });
 
+// health check and friendly homepage
+app.get("/healthz", (req, res) => {
+  res.type("text/plain").send("ok");
+});
+
+app.get("/", (req, res) => {
+  res.redirect("/listings");
+});
+
 const store = MongoStore.create({
   mongoUrl: dbUrl,
   crypto: {
